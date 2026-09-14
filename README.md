@@ -1,4 +1,3 @@
-# KrishiBundle
 
 AI-powered cooperative logistics platform for small farmers, built for the ARCNIGHT 2026 hackathon demo.
 
