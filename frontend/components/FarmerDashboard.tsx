@@ -18,7 +18,7 @@ export function FarmerDashboard() {
 
   async function loadOrders() {
     try {
-      const data = await api.getOrders();
+      const data = await api.getOrders(user?.phone);
       setOrders(data);
     } catch (err) {
       console.error(err);
@@ -28,21 +28,22 @@ export function FarmerDashboard() {
   }
 
   useEffect(() => {
-    loadOrders();
-  }, []);
+    if (user !== null) loadOrders();
+  }, [user]);
 
   async function addBooking(formData: FormData) {
     const crop = String(formData.get("crop") || "Tomato");
     const weight = Number(formData.get("weight") || 150);
-    const village = String(formData.get("village") || "New Village");
-    
+    const village = String(formData.get("village") || "");
+    const destination = String(formData.get("destination") || "");
+
     const payload = {
       farmer_name: user?.name || "Unknown Farmer",
       phone: user?.phone || "",
       village,
       crop,
       weight_kg: weight,
-      destination: "Koyambedu Mandi"
+      destination,
     };
 
     try {
@@ -84,7 +85,13 @@ export function FarmerDashboard() {
             <input
               className="focus-ring w-full rounded-lg border border-stone-300 px-3 py-2"
               name="village"
-              placeholder="Full address — e.g. 12/4 Gandhi Street, Melma, Kanchipuram District, Tamil Nadu 631501"
+              placeholder="Pickup address — e.g. 12/4 Gandhi Street, Melma, Kanchipuram, Tamil Nadu 631501"
+              required
+            />
+            <input
+              className="focus-ring w-full rounded-lg border border-stone-300 px-3 py-2"
+              name="destination"
+              placeholder="Destination market — e.g. Koyambedu Mandi, Chennai"
               required
             />
           </form>

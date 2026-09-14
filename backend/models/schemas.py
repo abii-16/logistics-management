@@ -12,7 +12,7 @@ class BookingCreate(BaseModel):
     village: str
     crop: str
     weight_kg: int = Field(gt=0)
-    destination: str = "Koyambedu Mandi"
+    destination: str
 
 
 class Booking(BookingCreate):

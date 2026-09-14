@@ -1,19 +1,25 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
+from typing import Optional
 
 from database.db import supabase_client
 from models.schemas import Booking, BookingCreate
 from services.notification_service import booking_confirmation
 from services.geocoding_service import geocode_village
+from services.destination_service import normalize_destination
+from services.pricing_service import calculate_individual_cost
 
 router = APIRouter()
 
 
 @router.get("", response_model=list[Booking])
-def list_bookings():
+def list_bookings(phone: Optional[str] = Query(None)):
     if not supabase_client:
         return []
     try:
-        response = supabase_client.table("orders").select("*").order("created_at", desc=True).execute()
+        query = supabase_client.table("orders").select("*").order("created_at", desc=True)
+        if phone:
+            query = query.eq("phone", phone)
+        response = query.execute()
         bookings = []
         for row in response.data:
             bookings.append(Booking(
@@ -66,6 +72,10 @@ def create_booking(payload: BookingCreate):
         # Geocode the village to lat/lng
         lat, lng = geocode_village(payload.village)
 
+        # Calculate individual cost based on real distance to mandi
+        normalized_dest = normalize_destination(payload.destination)
+        individual_cost = calculate_individual_cost(payload.weight_kg, lat, lng, normalized_dest)
+
         booking_row = {
             "id": booking_id,
             "farmer_id": farmer_id,
@@ -74,10 +84,10 @@ def create_booking(payload: BookingCreate):
             "village": payload.village,
             "crop": payload.crop,
             "weight_kg": payload.weight_kg,
-            "destination": payload.destination,
+            "destination": normalized_dest,
             "status": "Pending",
-            "individual_cost": round(payload.weight_kg * 8),
-            "shared_cost": round(payload.weight_kg * 3.5),
+            "individual_cost": individual_cost,
+            "shared_cost": individual_cost,  # same as individual until clustering runs
             "pickup_time": "Awaiting cluster",
             "source": "Web Dashboard",
             "language": "en",
@@ -127,9 +137,10 @@ def update_booking(booking_id: str, payload: BookingCreate):
             raise HTTPException(status_code=404, detail="Booking not found")
             
         # Recalculate costs and re-geocode if village changed
-        individual_cost = round(payload.weight_kg * 8)
-        shared_cost = round(payload.weight_kg * 3.5)
         lat, lng = geocode_village(payload.village)
+        normalized_dest = normalize_destination(payload.destination)
+        individual_cost = calculate_individual_cost(payload.weight_kg, lat, lng, normalized_dest)
+        shared_cost = individual_cost  # reset to individual until re-clustering
 
         update_data = {
             "farmer_name": payload.farmer_name,
@@ -137,7 +148,7 @@ def update_booking(booking_id: str, payload: BookingCreate):
             "village": payload.village,
             "crop": payload.crop,
             "weight_kg": payload.weight_kg,
-            "destination": payload.destination,
+            "destination": normalized_dest,
             "individual_cost": individual_cost,
             "shared_cost": shared_cost,
             "review_required": False,
