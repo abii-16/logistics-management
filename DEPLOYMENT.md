@@ -1,6 +1,6 @@
-# KrishiBundle Deployment Guide
+# Agrilogi Deployment Guide
 
-This guide details how to deploy the KrishiBundle platform (Next.js Frontend & FastAPI Backend) to production.
+This guide details how to deploy the Agrilogi platform (Next.js Frontend & FastAPI Backend) to production.
 
 ---
 
@@ -19,9 +19,9 @@ This guide details how to deploy the KrishiBundle platform (Next.js Frontend & F
 ### Step-by-Step:
 1. Create a free account on [Render](https://render.com/).
 2. Click **New +** and select **Web Service**.
-3. Connect your GitHub repository (`ARCHNIGHT`).
+3. Connect your GitHub repository (Agrilogi).
 4. Configure the service settings:
-   * **Name**: `krishibundle-backend`
+   * **Name**: `agrilogi-backend`
    * **Root Directory**: `backend`
    * **Language**: `Python`
    * **Branch**: `main`
@@ -35,7 +35,7 @@ This guide details how to deploy the KrishiBundle platform (Next.js Frontend & F
      * `DATABASE_URL` = (Your Supabase Postgres connection string if using direct SQL)
      * `GEMINI_API_KEY` = (Your Gemini API Key if using live voice extraction)
 6. Click **Create Web Service**. 
-7. Once deployed, Render will provide a public URL (e.g. `https://krishibundle-backend.onrender.com`). Copy this URL.
+7. Once deployed, Render will provide a public URL (e.g. `https://agrilogi-backend.onrender.com`). Copy this URL.
 
 ---
 
@@ -46,12 +46,12 @@ This guide details how to deploy the KrishiBundle platform (Next.js Frontend & F
 ### Step-by-Step:
 1. Create a free account on [Vercel](https://vercel.com/).
 2. Click **Add New** $\rightarrow$ **Project**.
-3. Connect your GitHub repository (`ARCHNIGHT`).
+3. Connect your GitHub repository (Agrilogi).
 4. Configure the project settings:
    * **Framework Preset**: `Next.js`
    * **Root Directory**: `frontend` (Click Edit, select the `frontend` folder, and save)
 5. Expand the **Environment Variables** section and add the following keys:
-   * `NEXT_PUBLIC_API_BASE_URL` = `https://krishibundle-backend.onrender.com` (Your Render FastAPI URL)
+   * `NEXT_PUBLIC_API_BASE_URL` = `https://agrilogi-backend.onrender.com` (Your Render FastAPI URL)
    * `NEXT_PUBLIC_SUPABASE_URL` = (Your Supabase project URL)
    * `NEXT_PUBLIC_SUPABASE_ANON_KEY` = (Your Supabase Anon Key)
 6. Click **Deploy**. Vercel will automatically build the Next.js routes and provide your production URL.

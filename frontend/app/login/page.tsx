@@ -151,7 +151,7 @@ export default function LoginPage() {
           </div>
         </div>
         <h2 className="mt-5 text-center text-3xl font-black text-soil uppercase tracking-wide">
-          Login to KrishiBundle
+          Login to Agrilogi
         </h2>
         <p className="mt-1.5 text-center text-xs text-stone-500">
           Enter credentials below to access your logistics workspace.

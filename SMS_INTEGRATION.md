@@ -1,7 +1,7 @@
 # SMS Integration Setup & Documentation
 
 ## Overview
-KrishiBundle now includes SMS notifications for:
+Agrilogi now includes SMS notifications for:
 - ✅ Registration success
 - ✅ Login alerts
 - ✅ Driver assignments
@@ -126,7 +126,7 @@ If Twilio credentials are not available:
 
 ```
 1. User enters phone + password
-2. Map phone to email (kb{phone}@krishibundle.com)
+2. Map phone to email (user{phone}@agrilogi.com)
 3. Supabase auth.signInWithPassword()
 4. Fetch user profile from `users` table
 5. Role validation
@@ -138,23 +138,23 @@ If Twilio credentials are not available:
 
 ### Registration SMS
 ```
-KrishiBundle Registration Successful
+Agrilogi Registration Successful
 
 Welcome, [Name].
 
 Your account has been created successfully.
 Role: Farmer/Driver
 
-You can now access the KrishiBundle platform.
+You can now access the Agrilogi platform.
 ```
 
 ### Login SMS
 ```
-KrishiBundle Login Alert
+Agrilogi Login Alert
 
 Hello [Name],
 
-You have successfully logged into your KrishiBundle account.
+You have successfully logged into your Agrilogi account.
 Date & Time: [Current Date & Time]
 
 If this was not you, contact support immediately.

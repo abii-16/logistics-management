@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes import admin, auction, bookings, drivers, voice, sms
 from settings import settings
 
-app = FastAPI(title="KrishiBundle API", version="1.0.0")
+app = FastAPI(title="Agrilogi API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,7 +27,7 @@ app.include_router(sms.router, prefix="/api/sms", tags=["sms"])
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "krishibundle"}
+    return {"status": "ok", "service": "agrilogi"}
 
 
 # ── Background clustering scheduler ──────────────────────────────────────────

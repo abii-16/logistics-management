@@ -63,7 +63,7 @@ export default function LandingPage() {
   if (checking) {
     return (
       <div className="min-h-screen bg-[#fffaf0] flex items-center justify-center">
-        <p className="text-stone-500 font-semibold animate-pulse">Loading KrishiBundle...</p>
+        <p className="text-stone-500 font-semibold animate-pulse">Loading Agrilogi...</p>
       </div>
     );
   }
@@ -74,7 +74,7 @@ export default function LandingPage() {
       <header className="border-b border-stone-200 bg-[#fffaf0]/80 backdrop-blur-md sticky top-0 z-30">
         <div className="mx-auto max-w-7xl px-4 py-4 lg:px-6 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <span className="text-xl font-black text-soil tracking-wide">KrishiBundle</span>
+            <span className="text-xl font-black text-soil tracking-wide">Agrilogi</span>
             <span className="text-[10px] uppercase font-bold text-river bg-river/10 px-2 py-0.5 rounded-full">v2.0</span>
           </div>
           <div className="inline-flex items-center gap-2 rounded-full border border-field/30 bg-white px-3.5 py-1 text-xs font-semibold text-field shadow-sm">
@@ -88,7 +88,7 @@ export default function LandingPage() {
       <section className="mx-auto max-w-4xl px-4 py-16 text-center space-y-8 flex-1 flex flex-col justify-center">
         <div className="space-y-4">
           <h1 className="text-5xl font-black tracking-normal text-soil sm:text-6xl md:text-7xl animate-fadeIn">
-            KRISHIBUNDLE
+            AGRILOGI
           </h1>
           <p className="text-lg sm:text-xl md:text-2xl font-bold text-stone-700 tracking-wide max-w-2xl mx-auto leading-relaxed">
             AI-Powered Cooperative Logistics Platform
@@ -142,7 +142,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-stone-200 py-6 text-center text-xs text-stone-500 bg-white">
-        © 2026 KrishiBundle Cooperative. Designed for AgriTech Hackathon Excellence.
+        © 2026 Agrilogi Cooperative. Designed for AgriTech Hackathon Excellence.
       </footer>
     </main>
   );

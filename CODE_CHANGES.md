@@ -1,4 +1,4 @@
-# KrishiBundle - Code Changes Summary
+# Agrilogi - Code Changes Summary
 
 ## Changes Made
 

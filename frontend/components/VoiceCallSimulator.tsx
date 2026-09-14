@@ -176,7 +176,7 @@ export function VoiceCallSimulator({ onBookingCreated, onNewNotification }: Voic
     clearPreviousCallData();
     setCallState("LANGUAGE_SELECTION");
     setStatusText("Connecting to 1800-KRISHI...");
-    speak("Welcome to KrishiBundle Voice Booking Helpline. Press 1 for Tamil, Press 2 for Hindi, Press 3 for English.");
+    speak("Welcome to Agrilogi Voice Booking Helpline. Press 1 for Tamil, Press 2 for Hindi, Press 3 for English.");
   }
 
   function handleKeyPress(num: number) {
@@ -364,7 +364,7 @@ export function VoiceCallSimulator({ onBookingCreated, onNewNotification }: Voic
       <section className="relative flex min-h-[460px] flex-col justify-between overflow-hidden rounded-xl border border-stone-200 bg-white p-5 shadow-panel">
         <div className="relative z-10 flex w-full flex-col items-center text-center">
           <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-soil/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-soil">
-            KrishiBundle Voice Assistant
+            Agrilogi Voice Assistant
           </div>
           <h2 className="text-xl font-extrabold text-soil">Book crop transport using voice</h2>
           <p className="mt-1 max-w-xs text-xs text-stone-500">Toll-free 1800-KRISHI helpline simulation with live entity extraction.</p>

@@ -1,5 +1,5 @@
 """
-SMS API Routes for KrishiBundle
+SMS API Routes for Agrilogi
 Handles SMS notification endpoints
 """
 
