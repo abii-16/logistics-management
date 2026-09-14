@@ -1,5 +1,5 @@
 """
-SMS Service for KrishiBundle
+SMS Service for Agrilogi
 Handles SMS notifications for registration, login, and other events
 """
 
@@ -18,7 +18,7 @@ from database.db import supabase_client
 
 
 class SMSService:
-    """Lightweight SMS service for KrishiBundle"""
+    """Lightweight SMS service for Agrilogi"""
 
     def __init__(self):
         self.twilio_available = TWILIO_AVAILABLE
@@ -128,11 +128,11 @@ class SMSService:
     def send_registration_sms(self, name: str, phone: str, role: str) -> bool:
         """Send registration success SMS"""
         message = (
-            f"KrishiBundle Registration Successful\n\n"
+            f"Agrilogi Registration Successful\n\n"
             f"Welcome, {name}.\n\n"
             f"Your account has been created successfully.\n"
             f"Role: {role.capitalize()}\n\n"
-            f"You can now access the KrishiBundle platform."
+            f"You can now access the Agrilogi platform."
         )
         return self.send_sms(phone, message, sms_type="registration")
 
@@ -140,9 +140,9 @@ class SMSService:
         """Send login alert SMS"""
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
         message = (
-            f"KrishiBundle Login Alert\n\n"
+            f"Agrilogi Login Alert\n\n"
             f"Hello {name},\n\n"
-            f"You have successfully logged into your KrishiBundle account.\n"
+            f"You have successfully logged into your Agrilogi account.\n"
             f"Date & Time: {current_time}\n\n"
             f"If this was not you, contact support immediately."
         )
@@ -151,7 +151,7 @@ class SMSService:
     def send_driver_assignment_sms(self, driver_name: str, phone: str, order_id: str) -> bool:
         """Send SMS when driver is assigned to delivery"""
         message = (
-            f"KrishiBundle Order Assignment\n\n"
+            f"Agrilogi Order Assignment\n\n"
             f"Hi {driver_name},\n\n"
             f"You have been assigned to deliver order {order_id}.\n"
             f"Check your app for details."
@@ -161,7 +161,7 @@ class SMSService:
     def send_bundle_created_sms(self, farmer_name: str, phone: str, bundle_id: str, savings: int) -> bool:
         """Send SMS when bundle is created"""
         message = (
-            f"KrishiBundle Bundle Created\n\n"
+            f"Agrilogi Bundle Created\n\n"
             f"Hi {farmer_name},\n\n"
             f"Your items have been bundled for delivery!\n"
             f"Bundle ID: {bundle_id}\n"
@@ -173,7 +173,7 @@ class SMSService:
     def send_trip_update_sms(self, user_name: str, phone: str, trip_id: str, status: str) -> bool:
         """Send SMS for trip status updates"""
         message = (
-            f"KrishiBundle Trip Update\n\n"
+            f"Agrilogi Trip Update\n\n"
             f"Hi {user_name},\n\n"
             f"Trip {trip_id} status: {status}\n"
             f"Check your app for real-time tracking."

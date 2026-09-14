@@ -42,7 +42,7 @@ export function VoiceUpload() {
         </button>
         <button
           className="focus-ring inline-flex items-center gap-2 rounded-lg border border-stone-300 px-4 py-2 text-sm font-semibold text-soil"
-          onClick={() => speak("KrishiBundle booking confirmed. Crop Tomato. Weight 400 kilograms. Village Melma.", "en-IN")}
+          onClick={() => speak("Agrilogi booking confirmed. Crop Tomato. Weight 400 kilograms. Village Melma.", "en-IN")}
           type="button"
         >
           <Volume2 size={18} />

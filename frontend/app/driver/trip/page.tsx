@@ -291,7 +291,7 @@ export default function DriverTripPage() {
           <div>
             <div className="flex items-center gap-2">
               <Truck className="text-soil animate-pulse" size={24} />
-              <span className="text-lg font-black text-soil tracking-wide">KrishiBundle Driver</span>
+              <span className="text-lg font-black text-soil tracking-wide">Agrilogi Driver</span>
             </div>
             <p className="text-[10px] text-stone-400 font-bold uppercase mt-1">Ola Driver Mode</p>
           </div>

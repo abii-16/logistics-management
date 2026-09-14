@@ -36,8 +36,8 @@ def _ola_maps_geocode(address: str) -> tuple[float, float] | None:
     req = urllib.request.Request(
         url,
         headers={
-            "User-Agent": "KrishiBundle/1.0",
-            "X-Request-Id": "krishibundle-geocode",
+            "User-Agent": "Agrilogi/1.0",
+            "X-Request-Id": "agrilogi-geocode",
         }
     )
 
@@ -73,7 +73,7 @@ def _nominatim_geocode(address: str) -> tuple[float, float] | None:
     url = f"https://nominatim.openstreetmap.org/search?{query}"
     req = urllib.request.Request(
         url,
-        headers={"User-Agent": "KrishiBundle/1.0 (farm-logistics-demo)"}
+        headers={"User-Agent": "Agrilogi/1.0 (farm-logistics-demo)"}
     )
 
     try:

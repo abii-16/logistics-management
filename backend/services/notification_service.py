@@ -5,7 +5,7 @@ def booking_confirmation(payload: BookingCreate, booking_id: str) -> Notificatio
     return Notification(
         phone=payload.phone,
         message=(
-            f"KrishiBundle Booking Confirmed\n"
+            f"Agrilogi Booking Confirmed\n"
             f"Crop: {payload.crop}\n"
             f"Weight: {payload.weight_kg}kg\n"
             f"Village: {payload.village}\n"

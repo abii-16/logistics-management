@@ -1,4 +1,4 @@
-# KrishiBundle Registration Fix - Quick Test Guide
+# Agrilogi Registration Fix - Quick Test Guide
 
 ## One-Time Setup
 

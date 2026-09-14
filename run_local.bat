@@ -1,6 +1,6 @@
 @echo off
 rem ------------------------------------------------------------
-rem  KrishiBundle - One-click local launcher
+rem  Agrilogi - One-click local launcher
 rem  Starts both frontend (Next.js) and backend (FastAPI),
 rem  then opens Chrome to http://localhost:3000
 rem ------------------------------------------------------------
@@ -13,13 +13,13 @@ pushd frontend
 echo [1/3] Installing frontend dependencies...
 call npm.cmd install
 echo [2/3] Starting Next.js dev server...
-start "KrishiBundle Frontend" cmd /c "npm.cmd run dev"
+start "Agrilogi Frontend" cmd /c "npm.cmd run dev"
 popd
 
 :: ---------- Backend (FastAPI) ----------
 pushd backend
 echo [3/3] Starting FastAPI backend...
-start "KrishiBundle Backend" cmd /c "uvicorn main:app --reload"
+start "Agrilogi Backend" cmd /c "uvicorn main:app --reload"
 popd
 
 popd

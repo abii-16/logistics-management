@@ -1,4 +1,4 @@
-# KRISHIBUNDLE
+# AGRILOGI
 
 ## AI-Powered Cooperative Logistics Platform for Small Farmers
 
@@ -10,7 +10,7 @@ Domain: AgriTech
 
 # 1. PRODUCT VISION
 
-KrishiBundle is a multilingual AI-powered agricultural logistics platform that helps farmers reduce transportation costs by automatically creating cooperative transport bundles.
+Agrilogi is a multilingual AI-powered agricultural logistics platform that helps farmers reduce transportation costs by automatically creating cooperative transport bundles.
 
 The platform supports:
 
@@ -37,7 +37,7 @@ Drivers often:
 * Travel with partially empty vehicles
 * Have no centralized load marketplace
 
-KrishiBundle solves this through AI-driven cooperative logistics.
+Agrilogi solves this through AI-driven cooperative logistics.
 
 ---
 
@@ -223,7 +223,7 @@ SMS Confirmation
 
 Example:
 
-KrishiBundle Booking Confirmed
+Agrilogi Booking Confirmed
 
 Crop: Tomato
 
@@ -797,4 +797,4 @@ Weight Transported
 
 # FINAL PITCH
 
-KrishiBundle enables both literate and non-literate farmers to access affordable transportation through voice calls, AI-powered logistics optimization, cooperative bundling, and driver marketplaces, reducing transportation costs while increasing farmer profits.
+Agrilogi enables both literate and non-literate farmers to access affordable transportation through voice calls, AI-powered logistics optimization, cooperative bundling, and driver marketplaces, reducing transportation costs while increasing farmer profits.
