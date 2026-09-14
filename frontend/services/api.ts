@@ -86,6 +86,7 @@ export const api = {
         departureTime: raw.recommendation.departure_time || raw.recommendation.departureTime
       },
       savingsTrend: raw.savingsTrend,
+      slot: raw.slot || null,
       orders: (raw.orders || []).map((o: any) => ({
         id: o.id,
         farmerName: o.farmer_name || o.farmerName,

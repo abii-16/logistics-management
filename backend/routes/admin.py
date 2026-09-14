@@ -58,12 +58,14 @@ def snapshot():
         )
     )
     recommendation = generate_recommendation()
-    
+
+    # Slot info
+    slot_dt = next_slot_time()
+    now_ist = datetime.now(IST)
+    wait_minutes = round((slot_dt - now_ist).total_seconds() / 60)
+
     if supabase_client:
         try:
-            # Run clustering first — this persists updated shared_costs to DB
-            clusters = build_clusters()
-
             orders_res = supabase_client.table("orders").select("*").order("created_at", desc=True).execute()
             orders = orders_res.data
 
@@ -72,13 +74,18 @@ def snapshot():
 
             individual_cost = sum(int(o["individual_cost"]) for o in orders)
             shared_cost = sum(int(o["shared_cost"]) for o in orders)
-            
+            pending_count = sum(1 for o in orders if o["status"] == "Pending")
+
             return {
                 "extraction": extraction,
                 "recommendation": recommendation,
-                "clusters": build_clusters(),
                 "orders": orders,
                 "bids": bids,
+                "slot": {
+                    "next_slot": slot_label(slot_dt),
+                    "wait_minutes": wait_minutes,
+                    "pending_orders": pending_count,
+                },
                 "savingsTrend": [
                     {"label": "Mon", "value": 1200},
                     {"label": "Tue", "value": 2600},
@@ -89,15 +96,19 @@ def snapshot():
             }
         except Exception as e:
             print(f"Error preparing snapshot from Supabase: {e}")
-            
+
     individual_cost = sum(int(booking["individual_cost"]) for booking in BOOKINGS)
     shared_cost = sum(int(booking["shared_cost"]) for booking in BOOKINGS)
     return {
         "extraction": extraction,
         "recommendation": recommendation,
-        "clusters": build_clusters(),
         "orders": BOOKINGS,
         "bids": BIDS,
+        "slot": {
+            "next_slot": slot_label(slot_dt),
+            "wait_minutes": wait_minutes,
+            "pending_orders": 0,
+        },
         "savingsTrend": [
             {"label": "Mon", "value": 1200},
             {"label": "Tue", "value": 2600},

@@ -172,6 +172,42 @@ export function AdminDashboard() {
         <MetricCard icon={Package} label="Weight Transported" value={`${totalWeight} kg`} detail={`Current cluster utilization is ${recommendation.truckUtilization}%`} />
       </div>
 
+      {/* Slot Status Banner */}
+      {snapshot?.slot && (
+        <section className="rounded-lg border border-harvest/30 bg-harvest/5 p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-harvest opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-harvest" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-stone-800">
+                Next clustering slot: <span className="text-harvest">{snapshot.slot.next_slot}</span>
+              </p>
+              <p className="text-xs text-stone-500">
+                {snapshot.slot.pending_orders} order{snapshot.slot.pending_orders !== 1 ? "s" : ""} waiting •{" "}
+                {snapshot.slot.wait_minutes} min until DBSCAN runs
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={async () => {
+              try {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/api/admin/run-clustering`, { method: "POST" });
+                const data = await res.json();
+                alert(`Clustering complete — ${data.clusters_formed} cluster(s) formed. Next slot: ${data.next_slot}`);
+                loadSnapshot();
+              } catch {
+                alert("Clustering failed — check backend logs.");
+              }
+            }}
+            className="focus-ring rounded-lg bg-harvest px-4 py-2 text-xs font-bold text-white hover:bg-harvest/90 transition-colors"
+          >
+            Run Now
+          </button>
+        </section>
+      )}
+
       {/* Manual Review Alert Card */}
       {reviewOrders.length > 0 && (
         <section className="rounded-lg border border-red-200 bg-red-50/70 p-5 shadow-panel border-l-4 border-l-chilli animate-fadeIn">
