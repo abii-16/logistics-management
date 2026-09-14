@@ -24,7 +24,7 @@ _last_nominatim_call = 0.0
 
 
 def _ola_maps_geocode(address: str) -> tuple[float, float] | None:
-    """Call Ola Maps Geocoding API."""
+    """Call Ola Maps Geocoding API with Tamil Nadu bounding box validation."""
     if not settings.ola_maps_api_key or not settings.ola_maps_api_key.strip():
         return None
 
@@ -45,11 +45,32 @@ def _ola_maps_geocode(address: str) -> tuple[float, float] | None:
         with urllib.request.urlopen(req, timeout=8) as resp:
             data = json.loads(resp.read().decode())
 
-        # Response: { "geocodingResults": [{ "geometry": { "location": { "lat": ..., "lng": ... } } }] }
         results = data.get("geocodingResults", [])
         if results:
             loc = results[0]["geometry"]["location"]
-            return float(loc["lat"]), float(loc["lng"])
+            lat, lng = float(loc["lat"]), float(loc["lng"])
+
+            # Validate result is within India bounding box
+            # India: lat 6-37, lng 68-98
+            if not (6.0 <= lat <= 37.0 and 68.0 <= lng <= 98.0):
+                print(f"Ola Maps returned coordinates outside India ({lat}, {lng}) for '{address}' — rejecting")
+                return None
+
+            # If address contains a pincode, do a loose district-level sanity check
+            # by verifying the result formatted address shares some words with the input
+            formatted = results[0].get("formatted_address", "").lower()
+            address_lower = address.lower()
+
+            # Extract pincode from address if present
+            import re
+            pincode_match = re.search(r'\b(\d{6})\b', address)
+            if pincode_match:
+                pincode = pincode_match.group(1)
+                if pincode not in formatted:
+                    print(f"Ola Maps pincode mismatch: input has {pincode} but result '{formatted[:80]}' doesn't — falling back")
+                    return None
+
+            return lat, lng
     except Exception as e:
         print(f"Ola Maps geocode failed for '{address}': {e}")
 

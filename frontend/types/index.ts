@@ -21,6 +21,9 @@ export type FarmerOrder = {
   language?: string;
   confidence?: Record<string, number> | null;
   reviewRequired?: boolean;
+  lat?: number | null;
+  lng?: number | null;
+  clusterId?: string | null;
 };
 
 export type Driver = {

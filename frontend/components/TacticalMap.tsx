@@ -1,29 +1,22 @@
 import type { FarmerOrder } from "@/types";
 
-const VILLAGE_COORDS: Record<string, { x: number; y: number }> = {
-  melma: { x: 90, y: 95 },
-  athur: { x: 185, y: 80 },
-  sevoor: { x: 145, y: 165 },
-  thiruvetriyur: { x: 260, y: 180 },
-  default: { x: 200, y: 120 }
-};
+// Project real lat/lng to SVG canvas coordinates
+// SVG viewBox: 0 0 390 240
+function projectToSVG(lat: number, lng: number, bounds: { minLat: number; maxLat: number; minLng: number; maxLng: number }) {
+  const PADDING = 30;
+  const WIDTH = 390 - PADDING * 2;
+  const HEIGHT = 240 - PADDING * 2;
 
-const getCoords = (villageName: string) => {
-  const norm = (villageName || "").toLowerCase().trim();
-  if (norm === "melma") return VILLAGE_COORDS.melma;
-  if (norm === "athur") return VILLAGE_COORDS.athur;
-  if (norm === "sevoor") return VILLAGE_COORDS.sevoor;
-  if (norm === "thiruvetriyur") return VILLAGE_COORDS.thiruvetriyur;
+  const latRange = bounds.maxLat - bounds.minLat || 0.1;
+  const lngRange = bounds.maxLng - bounds.minLng || 0.1;
 
-  // Hash fallback
-  let hash = 0;
-  for (let i = 0; i < norm.length; i++) {
-    hash = norm.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const x = 50 + Math.abs(hash % 200);
-  const y = 50 + Math.abs((hash >> 8) % 150);
+  const x = PADDING + ((lng - bounds.minLng) / lngRange) * WIDTH;
+  const y = PADDING + ((bounds.maxLat - lat) / latRange) * HEIGHT; // invert Y axis
   return { x, y };
-};
+}
+
+// Distinct colours per cluster
+const CLUSTER_COLORS = ["#4f7d5a", "#2f7f8f", "#d44d3d", "#f6b44b", "#7c5cbf", "#e07b3a"];
 
 export function TacticalMap({ orders }: { orders: FarmerOrder[] }) {
   try {
@@ -53,92 +46,115 @@ export function TacticalMap({ orders }: { orders: FarmerOrder[] }) {
       );
     }
 
-    // Dynamic points calculation
-    const farmerPoints = orders.map((order) => {
-      const coords = getCoords(order.village);
-      return {
-        ...coords,
-        label: order.village || "Melma",
-        farmer: order.farmerName
-      };
+    // Only plot orders with real GPS coordinates
+    const geoOrders = orders.filter(o => o.lat && o.lng);
+    const noGeoOrders = orders.filter(o => !o.lat || !o.lng);
+
+    if (geoOrders.length === 0) {
+      return (
+        <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-panel">
+          <h2 className="text-lg font-bold text-soil">Cluster Visualization</h2>
+          <div className="relative mt-4 h-72 w-full rounded-lg bg-[#eef3e9] flex flex-col items-center justify-center border border-dashed border-stone-300">
+            <p className="text-xs text-stone-500 font-bold uppercase tracking-wider">No GPS data yet</p>
+            <p className="text-[10px] text-stone-400 mt-1 max-w-[220px] text-center leading-normal">
+              {orders.length} order(s) present but no coordinates resolved. Submit orders with a full address to enable map view.
+            </p>
+          </div>
+        </section>
+      );
+    }
+
+    // Compute lat/lng bounds across all geo orders
+    const lats = geoOrders.map(o => o.lat as number);
+    const lngs = geoOrders.map(o => o.lng as number);
+    const bounds = {
+      minLat: Math.min(...lats) - 0.05,
+      maxLat: Math.max(...lats) + 0.05,
+      minLng: Math.min(...lngs) - 0.05,
+      maxLng: Math.max(...lngs) + 0.05,
+    };
+
+    // Assign colour per cluster_id
+    const clusterIds = Array.from(new Set(geoOrders.map(o => o.clusterId || "unassigned")));
+    const clusterColorMap: Record<string, string> = {};
+    clusterIds.forEach((cid, i) => {
+      clusterColorMap[cid] = CLUSTER_COLORS[i % CLUSTER_COLORS.length];
     });
 
-    const mandiPoint = { x: 320, y: 130, label: "Koyambedu Mandi" };
+    // Project farmer points
+    const farmerPoints = geoOrders.map(o => ({
+      ...projectToSVG(o.lat as number, o.lng as number, bounds),
+      label: o.village?.split(",")[0] || "?",
+      farmer: o.farmerName,
+      clusterId: o.clusterId || "unassigned",
+      color: clusterColorMap[o.clusterId || "unassigned"],
+    }));
 
-    // Calculate cluster center
-    let avgX = 140;
-    let avgY = 110;
-    let radius = 60;
-    if (farmerPoints.length > 0) {
-      const sumX = farmerPoints.reduce((sum, p) => sum + p.x, 0);
-      const sumY = farmerPoints.reduce((sum, p) => sum + p.y, 0);
-      avgX = sumX / farmerPoints.length;
-      avgY = sumY / farmerPoints.length;
-
-      let maxDist = 30;
-      farmerPoints.forEach((p) => {
-        const dist = Math.sqrt(Math.pow(p.x - avgX, 2) + Math.pow(p.y - avgY, 2));
-        if (dist > maxDist) maxDist = dist;
-      });
-      radius = Math.min(95, maxDist + 20); // cap max radius
-    }
+    // Destination midpoint (average of all farmer points — proxy for "truck heading out")
+    const destX = farmerPoints.reduce((s, p) => s + p.x, 0) / farmerPoints.length + 80;
+    const destY = farmerPoints.reduce((s, p) => s + p.y, 0) / farmerPoints.length - 30;
+    const destinations = Array.from(new Set(geoOrders.map(o => o.destination || "Market")));
+    const destLabel = destinations.length === 1 ? destinations[0].split(",")[0] : `${destinations.length} Markets`;
 
     return (
       <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-panel animate-fadeIn">
-        <h2 className="text-lg font-bold text-soil">Cluster Visualization</h2>
-        <svg className="mt-4 h-72 w-full rounded-lg bg-[#eef3e9]" viewBox="0 0 390 240" role="img" aria-label="Cluster map">
-          {/* Active routes from dynamic farmer points to Mandi */}
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-lg font-bold text-soil">Cluster Visualization</h2>
+          {noGeoOrders.length > 0 && (
+            <span className="text-[10px] text-stone-400 italic">{noGeoOrders.length} order(s) without GPS not shown</span>
+          )}
+        </div>
+
+        {/* Cluster legend */}
+        {clusterIds.length > 1 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {clusterIds.map((cid, i) => (
+              <span key={cid} className="inline-flex items-center gap-1 text-[10px] font-bold text-stone-600 bg-stone-50 border border-stone-200 px-2 py-0.5 rounded-full">
+                <span className="h-2 w-2 rounded-full inline-block" style={{ background: CLUSTER_COLORS[i % CLUSTER_COLORS.length] }} />
+                {cid === "unassigned" ? "Pending cluster" : cid}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <svg className="mt-2 h-72 w-full rounded-lg bg-[#eef3e9]" viewBox="0 0 390 240" role="img" aria-label="Cluster map">
+          {/* Routes from each farmer to destination */}
           {farmerPoints.map((pt, i) => (
             <path
-              key={`route-${pt.label}-${i}`}
-              d={`M ${pt.x} ${pt.y} Q ${(pt.x + mandiPoint.x) / 2} ${(pt.y + mandiPoint.y) / 2 - 20} ${mandiPoint.x} ${mandiPoint.y}`}
+              key={`route-${i}`}
+              d={`M ${pt.x} ${pt.y} Q ${(pt.x + destX) / 2} ${(pt.y + destY) / 2 - 15} ${destX} ${destY}`}
               fill="none"
-              stroke="#2f7f8f"
-              strokeWidth="2.5"
-              strokeDasharray="5 5"
-              className="opacity-70"
+              stroke={pt.color}
+              strokeWidth="2"
+              strokeDasharray="5 4"
+              opacity="0.6"
             />
           ))}
 
-          {/* Translucent Cluster Zone Boundary */}
-          {farmerPoints.length > 0 && (
-            <circle
-              cx={avgX}
-              cy={avgY}
-              fill="#4f7d5a15"
-              r={radius}
-              stroke="#4f7d5a"
-              strokeWidth="2"
-              strokeDasharray="3 3"
-            />
-          )}
-
-          {/* Farmer Location Nodes */}
-          {farmerPoints.map((point, index) => (
-            <g key={`farmer-pt-${point.label}-${index}`}>
-              <circle cx={point.x} cy={point.y} fill="#4f7d5a" r={8} stroke="#ffffff" strokeWidth="1.5" />
-              <text fill="#312a24" fontSize="10" fontWeight="700" x={point.x + 10} y={point.y + 4}>
-                {point.label}
+          {/* Farmer nodes — coloured by cluster */}
+          {farmerPoints.map((pt, i) => (
+            <g key={`farmer-${i}`}>
+              <circle cx={pt.x} cy={pt.y} r={8} fill={pt.color} stroke="#fff" strokeWidth="1.5" />
+              <text fill="#312a24" fontSize="9" fontWeight="700" x={pt.x + 11} y={pt.y + 4}>
+                {pt.label}
               </text>
             </g>
           ))}
 
-          {/* Mandi Node */}
+          {/* Destination node */}
           <g>
-            <circle cx={mandiPoint.x} cy={mandiPoint.y} fill="#d44d3d" r={10} stroke="#ffffff" strokeWidth="2" />
-            <text fill="#312a24" fontSize="10" fontWeight="800" x={mandiPoint.x - 40} y={mandiPoint.y - 12}>
-              {mandiPoint.label}
+            <circle cx={destX} cy={destY} r={10} fill="#d44d3d" stroke="#fff" strokeWidth="2" />
+            <text fill="#312a24" fontSize="9" fontWeight="800" x={destX - 30} y={destY - 14}>
+              {destLabel}
             </text>
           </g>
 
-          {/* Dispatch Truck Symbol moving along route */}
-          {farmerPoints.length > 0 && (
-            <g transform={`translate(${(avgX + mandiPoint.x) / 2 - 12}, ${(avgY + mandiPoint.y) / 2 - 12})`}>
-              <rect fill="#f6b44b" height="12" rx="3" width="20" />
-              <circle cx="5" cy="12" fill="#312a24" r="2.5" />
-              <circle cx="15" cy="12" fill="#312a24" r="2.5" />
-            </g>
-          )}
+          {/* Truck symbol */}
+          <g transform={`translate(${(farmerPoints[0]?.x + destX) / 2 - 10}, ${(farmerPoints[0]?.y + destY) / 2 - 8})`}>
+            <rect fill="#f6b44b" height="10" rx="2" width="18" />
+            <circle cx="4" cy="10" r="2.5" fill="#312a24" />
+            <circle cx="14" cy="10" r="2.5" fill="#312a24" />
+          </g>
         </svg>
       </section>
     );
@@ -149,9 +165,6 @@ export function TacticalMap({ orders }: { orders: FarmerOrder[] }) {
         <h2 className="text-lg font-bold text-soil">Cluster Visualization</h2>
         <div className="relative mt-4 h-72 w-full rounded-lg bg-red-50 flex flex-col items-center justify-center border border-red-200">
           <p className="text-xs text-red-500 font-bold uppercase tracking-wider">Map Render Failure</p>
-          <p className="text-[10px] text-red-400 mt-1 max-w-[220px] text-center leading-normal">
-            An error occurred while compiling spatial coordinates.
-          </p>
         </div>
       </section>
     );

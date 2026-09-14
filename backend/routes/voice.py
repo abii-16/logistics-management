@@ -12,6 +12,7 @@ from database.seed_data import BOOKINGS
 from models.schemas import ExtractionRequest, ExtractionResult
 from services.extraction_service import extract_from_transcript
 from services.geocoding_service import geocode_village
+from services.destination_service import normalize_destination
 from settings import settings
 
 router = APIRouter()
@@ -116,7 +117,7 @@ def _build_booking_row(extracted: dict, confidence: dict, language: str, review_
         "village": village,
         "crop": extracted.get("crop", "Unknown Crop"),
         "weight_kg": weight,
-        "destination": "Koyambedu Mandi",
+        "destination": normalize_destination(extracted.get("destination", "Koyambedu Mandi")),
         "status": "Pending",
         "individual_cost": round(weight * 8),
         "shared_cost": round(weight * 3.5),

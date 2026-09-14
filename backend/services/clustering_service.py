@@ -19,6 +19,7 @@ from sklearn.cluster import DBSCAN
 from database.db import supabase_client
 from services.compatibility_service import crops_are_compatible
 from services.cost_allocation import allocate_cluster_costs
+from services.destination_service import normalize_destination
 
 IST = timezone(timedelta(hours=5, minutes=30))
 SLOT_HOURS_IST = [6, 18]          # 6 AM and 6 PM IST
@@ -42,7 +43,11 @@ def slot_label(slot_dt: datetime) -> str:
     """Human readable slot label e.g. 'Today, 6:00 AM'"""
     now_ist = datetime.now(IST)
     day = "Today" if slot_dt.date() == now_ist.date() else "Tomorrow"
-    return f"{day}, {slot_dt.strftime('%-I:%M %p')}"
+    # Use cross-platform formatting (%-I is Linux only, doesn't work on Windows)
+    hour = slot_dt.strftime("%I").lstrip("0") or "12"
+    minute = slot_dt.strftime("%M")
+    ampm = slot_dt.strftime("%p")
+    return f"{day}, {hour}:{minute} {ampm}"
 
 
 def _persist_cluster(order_ids: list[str], cluster_id: str, slot_dt: datetime, farmer_costs: list[dict]) -> None:
@@ -129,30 +134,48 @@ def build_clusters() -> list[dict]:
 
         print(f"Clustering {len(pending_orders)} Pending orders...")
 
-        geo_orders = [o for o in pending_orders if o.get("lat") and o.get("lng")]
-        no_geo_orders = [o for o in pending_orders if not o.get("lat") or not o.get("lng")]
+        # Group by normalized destination — farmers going to different markets never share a truck
+        destination_groups: dict[str, list] = {}
+        for o in pending_orders:
+            dest = normalize_destination(o.get("destination") or "Unknown")
+            key = dest.strip().lower()
+            if key not in destination_groups:
+                destination_groups[key] = []
+            destination_groups[key].append(o)
 
-        groups: dict[int, list] = {}
+        print(f"Found {len(destination_groups)} destination(s): {list(destination_groups.keys())}")
 
-        if geo_orders:
-            coords_rad = np.radians([[float(o["lat"]), float(o["lng"])] for o in geo_orders])
-            db = DBSCAN(
-                eps=EPS_RAD,
-                min_samples=1,
-                algorithm="ball_tree",
-                metric="haversine",
-            ).fit(coords_rad)
+        all_groups: dict[int, list] = {}
+        group_counter = 0
 
-            for idx, label in enumerate(db.labels_):
-                if label not in groups:
-                    groups[label] = []
-                groups[label].append(geo_orders[idx])
+        for dest, dest_orders in destination_groups.items():
+            geo_orders = [o for o in dest_orders if o.get("lat") and o.get("lng")]
+            no_geo_orders = [o for o in dest_orders if not o.get("lat") or not o.get("lng")]
 
-        # Orders without GPS coords each get a solo group
-        solo_start = max(groups.keys(), default=-1) + 1
-        for i, order in enumerate(no_geo_orders):
-            groups[solo_start + i] = [order]
-            print(f"Order {order['id']} (no coords) → solo cluster")
+            if geo_orders:
+                coords_rad = np.radians([[float(o["lat"]), float(o["lng"])] for o in geo_orders])
+                db = DBSCAN(
+                    eps=EPS_RAD,
+                    min_samples=1,
+                    algorithm="ball_tree",
+                    metric="haversine",
+                ).fit(coords_rad)
+
+                for idx, label in enumerate(db.labels_):
+                    global_label = group_counter + label
+                    if global_label not in all_groups:
+                        all_groups[global_label] = []
+                    all_groups[global_label].append(geo_orders[idx])
+
+                group_counter += (max(db.labels_) + 1) if len(db.labels_) > 0 else 1
+
+            # Orders without GPS coords each get a solo group per destination
+            for order in no_geo_orders:
+                all_groups[group_counter] = [order]
+                group_counter += 1
+                print(f"Order {order['id']} (no coords, dest={dest}) → solo cluster")
+
+        groups = all_groups
 
         # Enforce same-farmer constraint
         groups = _enforce_same_farmer_constraint(groups)
@@ -173,7 +196,7 @@ def build_clusters() -> list[dict]:
             clusters.append({
                 "id": cluster_id,
                 "villages": villages,
-                "destination": "Koyambedu Mandi",
+                "destination": list(set(o.get("destination", "Unknown") for o in group_orders))[0],
                 "total_weight_kg": total_weight,
                 "compatible": crops_are_compatible(crops),
                 "farmers": len(set(o.get("farmer_id") or o["id"] for o in group_orders)),

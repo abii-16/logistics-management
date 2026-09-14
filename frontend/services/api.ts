@@ -1,4 +1,4 @@
-import { bids, drivers, extraction, farmerOrders, recommendation, savingsTrend } from "@/services/demoData";
+import { bids, drivers, farmerOrders } from "@/services/demoData";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -24,8 +24,9 @@ async function request<T>(path: string, fallback: T, init?: RequestInit): Promis
 }
 
 export const api = {
-  getOrders: async () => {
-    const raw = await request<any[]>("/api/bookings", farmerOrders);
+  getOrders: async (phone?: string) => {
+    const path = phone ? `/api/bookings?phone=${encodeURIComponent(phone)}` : "/api/bookings";
+    const raw = await request<any[]>(path, farmerOrders);
     return raw.map(o => ({
       id: o.id,
       farmerName: o.farmer_name || o.farmerName,
@@ -41,7 +42,10 @@ export const api = {
       source: o.source || "Web Dashboard",
       language: o.language || "en",
       confidence: o.confidence || null,
-      reviewRequired: o.review_required || o.reviewRequired || false
+      reviewRequired: o.review_required || o.reviewRequired || false,
+      lat: o.lat || null,
+      lng: o.lng || null,
+      clusterId: o.cluster_id || o.clusterId || null,
     }));
   },
   getDrivers: async () => {
@@ -69,11 +73,19 @@ export const api = {
   },
   getAdminSnapshot: async () => {
     const raw = await request<any>("/api/admin/snapshot", {
-      extraction,
-      recommendation,
-      savingsTrend,
-      orders: farmerOrders,
-      bids: bids
+      extraction: {
+        transcript: "Backend offline.",
+        extracted: { farmer_name: "—", village: "—", crop: "—", weight: "—" },
+        confidence: { farmer_name: 0, village: 0, crop: 0, weight: 0 },
+      },
+      recommendation: {
+        farmers: 0, total_weight_kg: 0, truck_utilization: 0,
+        estimated_savings: 0, spoilage_risk: "Low", departure_time: "—"
+      },
+      savingsTrend: [],
+      slot: null,
+      orders: [],
+      bids: []
     });
     return {
       extraction: raw.extraction,
@@ -102,7 +114,10 @@ export const api = {
         source: o.source || "Web Dashboard",
         language: o.language || "en",
         confidence: o.confidence || null,
-        reviewRequired: o.review_required || o.reviewRequired || false
+        reviewRequired: o.review_required || o.reviewRequired || false,
+        lat: o.lat || null,
+        lng: o.lng || null,
+        clusterId: o.cluster_id || o.clusterId || null,
       })),
       bids: (raw.bids || []).map((b: any) => ({
         id: b.id,
@@ -127,7 +142,7 @@ export const api = {
       crop: payload.crop,
       weight_kg: Number(payload.weight_kg || payload.weightKg),
       status: "Cluster Forming",
-      destination: payload.destination || "Koyambedu Mandi",
+      destination: payload.destination || "",
       individual_cost: Number(payload.weight_kg || payload.weightKg) * 8.5,
       shared_cost: Number(payload.weight_kg || payload.weightKg) * 3.6,
       pickup_time: "Today, 5:30 PM",
@@ -183,7 +198,7 @@ export const api = {
       village: payload.village,
       crop: payload.crop,
       weight_kg: Number(payload.weightKg),
-      destination: payload.destination || "Koyambedu Mandi"
+      destination: payload.destination || ""
     };
     const o = await request<any>(`/api/bookings/${id}`, null, {
       method: "PUT",
@@ -197,7 +212,7 @@ export const api = {
       crop: payload.crop,
       weight_kg: Number(payload.weightKg),
       status: "Pending",
-      destination: payload.destination || "Koyambedu Mandi",
+      destination: payload.destination || "",
       individual_cost: Number(payload.weightKg) * 8.5,
       shared_cost: Number(payload.weightKg) * 3.6,
       pickup_time: "Today, 5:30 PM",
@@ -290,7 +305,7 @@ export const api = {
           crop: extracted.crop,
           weightKg: extracted.weight,
           status: "Cluster Forming",
-          destination: "Koyambedu Mandi",
+          destination: "Koyambedu Mandi",  // voice default — no destination in speech
           individualCost: extracted.weight * 8.5,
           sharedCost: extracted.weight * 3.6,
           pickupTime: "Today, 5:30 PM",
