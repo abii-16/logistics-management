@@ -18,6 +18,7 @@ if BaseSettings:
         twilio_auth_token: str = ""
         twilio_phone_number: str = ""
         ola_maps_api_key: str = ""
+        tomtom_api_key: str = ""
 
         model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 else:
@@ -31,6 +32,7 @@ else:
         twilio_auth_token = os.getenv("TWILIO_AUTH_TOKEN", "")
         twilio_phone_number = os.getenv("TWILIO_PHONE_NUMBER", "")
         ola_maps_api_key = os.getenv("OLA_MAPS_API_KEY", "")
+        tomtom_api_key = os.getenv("TOMTOM_API_KEY", "")
 
 
 settings = Settings()

@@ -13,6 +13,7 @@ from models.schemas import ExtractionRequest, ExtractionResult
 from services.extraction_service import extract_from_transcript
 from services.geocoding_service import geocode_village
 from services.destination_service import normalize_destination
+from services.pricing_service import calculate_individual_cost
 from settings import settings
 
 router = APIRouter()
@@ -107,6 +108,8 @@ def _build_booking_row(extracted: dict, confidence: dict, language: str, review_
 
     village = extracted.get("village", "Unknown Village")
     lat, lng = geocode_village(village)
+    dest = normalize_destination(extracted.get("destination", "Koyambedu Mandi"))
+    individual_cost = calculate_individual_cost(weight, lat, lng, dest)
 
     phone = "+91 90030 11224" if language == "Tamil" else ("+91 81221 47770" if language == "Hindi" else "+91 94441 22009")
     return {
@@ -117,10 +120,10 @@ def _build_booking_row(extracted: dict, confidence: dict, language: str, review_
         "village": village,
         "crop": extracted.get("crop", "Unknown Crop"),
         "weight_kg": weight,
-        "destination": normalize_destination(extracted.get("destination", "Koyambedu Mandi")),
+        "destination": dest,
         "status": "Pending",
-        "individual_cost": round(weight * 8),
-        "shared_cost": round(weight * 3.5),
+        "individual_cost": individual_cost,
+        "shared_cost": individual_cost,
         "pickup_time": "Awaiting cluster",
         "source": "Voice Call",
         "language": language,

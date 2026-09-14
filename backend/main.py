@@ -4,7 +4,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routes import admin, auction, bookings, drivers, voice, sms
+from routes import admin, auction, bookings, drivers, voice, sms, route_optimization
 from settings import settings
 
 app = FastAPI(title="KrishiBundle API", version="1.0.0")
@@ -23,6 +23,7 @@ app.include_router(drivers.router, prefix="/api/drivers", tags=["drivers"])
 app.include_router(auction.router, prefix="/api/auction", tags=["auction"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(sms.router, prefix="/api/sms", tags=["sms"])
+app.include_router(route_optimization.router)
 
 
 @app.get("/health")

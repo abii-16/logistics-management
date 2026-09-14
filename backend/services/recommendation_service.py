@@ -1,4 +1,7 @@
 from database.db import supabase_client
+from services.clustering_service import next_slot_time, slot_label
+
+TRUCK_CAPACITY_KG = 1100  # Standard cooperative truck capacity
 
 
 def generate_recommendation() -> dict:
@@ -8,30 +11,51 @@ def generate_recommendation() -> dict:
             "total_weight_kg": 0,
             "truck_utilization": 0,
             "estimated_savings": 0,
-            "spoilage_risk": "Medium",
-            "departure_time": "Today, 5:30 PM",
+            "spoilage_risk": "Low",
+            "departure_time": slot_label(next_slot_time()),
         }
     try:
-        response = supabase_client.table("orders").select("*").execute()
+        # Only count active orders (not completed/cancelled)
+        response = supabase_client.table("orders").select("*").in_(
+            "status", ["Pending", "Cluster Forming", "Driver Assigned", "In Transit"]
+        ).execute()
         orders = response.data
-        
-        total_weight = sum(int(order["weight_kg"]) for order in orders)
-        individual_cost = sum(int(order["individual_cost"]) for order in orders)
-        shared_cost = sum(int(order["shared_cost"]) for order in orders)
-        
-        crops = set(order["crop"].lower() for order in orders)
-        if "tomato" in crops or "tomatoes" in crops:
-            spoilage_risk = "High" if len(orders) > 4 else "Medium"
+
+        if not orders:
+            return {
+                "farmers": 0,
+                "total_weight_kg": 0,
+                "truck_utilization": 0,
+                "estimated_savings": 0,
+                "spoilage_risk": "Low",
+                "departure_time": slot_label(next_slot_time()),
+            }
+
+        total_weight = sum(int(o["weight_kg"]) for o in orders)
+        individual_cost = sum(int(o["individual_cost"]) for o in orders)
+        shared_cost = sum(int(o["shared_cost"]) for o in orders)
+
+        # Spoilage risk based on crops present
+        crops = set(o["crop"].lower() for o in orders)
+        has_tomato = "tomato" in crops or "tomatoes" in crops
+        has_sensitive = any(c in crops for c in ["spinach", "leafy", "green", "cabbage", "cauliflower"])
+
+        if has_tomato and has_sensitive:
+            spoilage_risk = "High"
+        elif has_tomato or len(orders) > 4:
+            spoilage_risk = "Medium"
         else:
             spoilage_risk = "Low"
-            
+
+        unique_farmers = len(set(o.get("farmer_id") or o["id"] for o in orders))
+
         return {
-            "farmers": len(orders),
+            "farmers": unique_farmers,
             "total_weight_kg": total_weight,
-            "truck_utilization": min(100, round((total_weight / 1100) * 100)) if total_weight > 0 else 0,
+            "truck_utilization": min(100, round((total_weight / TRUCK_CAPACITY_KG) * 100)),
             "estimated_savings": max(0, individual_cost - shared_cost),
             "spoilage_risk": spoilage_risk,
-            "departure_time": "Today, 5:30 PM",
+            "departure_time": slot_label(next_slot_time()),
         }
     except Exception as e:
         print(f"Error generating recommendation: {e}")
@@ -40,7 +64,6 @@ def generate_recommendation() -> dict:
             "total_weight_kg": 0,
             "truck_utilization": 0,
             "estimated_savings": 0,
-            "spoilage_risk": "Medium",
-            "departure_time": "Today, 5:30 PM",
+            "spoilage_risk": "Low",
+            "departure_time": slot_label(next_slot_time()),
         }
-

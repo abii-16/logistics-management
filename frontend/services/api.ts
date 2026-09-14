@@ -143,8 +143,9 @@ export const api = {
       weight_kg: Number(payload.weight_kg || payload.weightKg),
       status: "Cluster Forming",
       destination: payload.destination || "",
-      individual_cost: Number(payload.weight_kg || payload.weightKg) * 8.5,
-      shared_cost: Number(payload.weight_kg || payload.weightKg) * 3.6,
+      // Offline fallback — backend computes real distance-based cost when online
+      individual_cost: Number(payload.weight_kg || payload.weightKg) * 8,
+      shared_cost: Number(payload.weight_kg || payload.weightKg) * 8,
       pickup_time: "Today, 5:30 PM",
       source: payload.source || "Web Dashboard",
       language: payload.language || "en",
@@ -213,8 +214,8 @@ export const api = {
       weight_kg: Number(payload.weightKg),
       status: "Pending",
       destination: payload.destination || "",
-      individual_cost: Number(payload.weightKg) * 8.5,
-      shared_cost: Number(payload.weightKg) * 3.6,
+      individual_cost: Number(payload.weightKg) * 8,
+      shared_cost: Number(payload.weightKg) * 8,  // offline fallback
       pickup_time: "Today, 5:30 PM",
       source: "Web Dashboard",
       language: "en",
@@ -306,8 +307,8 @@ export const api = {
           weightKg: extracted.weight,
           status: "Cluster Forming",
           destination: "Koyambedu Mandi",  // voice default — no destination in speech
-          individualCost: extracted.weight * 8.5,
-          sharedCost: extracted.weight * 3.6,
+          individualCost: extracted.weight * 8,
+          sharedCost: extracted.weight * 8,  // offline fallback — no distance data
           pickupTime: "Today, 5:30 PM",
           source: "Voice Call",
           language: language === "Tamil" ? "ta" : language === "Hindi" ? "hi" : "en",

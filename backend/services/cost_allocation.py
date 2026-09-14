@@ -2,79 +2,113 @@
 services/cost_allocation.py
 
 Allocates the cluster's total truck cost across farmers using
-70% weight-based + 30% distance-based shares, instead of every
-farmer in a cluster paying the same flat per-kg rate.
+70% weight-based + 30% distance-based shares.
 
-Total truck cost = sum(weight_kg) * 3.5  (same as before)
-Only the split between farmers changes.
+Uses real lat/lng coordinates (from geocoding) for distance calculation.
+Falls back to weight-only allocation if coordinates are missing.
+
+Key invariant: bundled_cost <= individual_cost always.
+For a solo farmer, bundled_cost == individual_cost (no savings, no penalty).
 """
 
 import math
-from services.geo import get_coordinates
 
-MANDI_COORDS = (135.0, 145.0)  # Koyambedu Mandi approx center
 FLAT_RATE_PER_KG = 3.5
 WEIGHT_WEIGHT = 0.7
 DISTANCE_WEIGHT = 0.3
 
 
-def _distance(a: tuple[float, float], b: tuple[float, float]) -> float:
-    return math.dist(a, b)
+def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Real-world distance in km between two lat/lng points."""
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
+    a = (math.sin(dlat / 2) ** 2 +
+         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng / 2) ** 2)
+    return R * 2 * math.asin(math.sqrt(a))
 
 
 def _build_route(orders: list[dict]) -> list[dict]:
-    """Nearest-neighbor route starting at the Mandi.
-    Returns legs in visiting order, each with distance from previous stop.
-    Final return leg to Mandi appended with order_id=None.
     """
-    remaining = orders.copy()
-    current = MANDI_COORDS
+    Nearest-neighbor pickup route using real lat/lng.
+    Starts from destination (approximated as centroid of all points + offset),
+    visits each farmer, returns to start.
+    Returns legs with order_id and distance_km.
+    """
+    # Use centroid of all farmer coords as proxy for mandi location
+    # (actual mandi lat/lng not stored — this gives relative distances)
+    valid = [(o, float(o["lat"]), float(o["lng"])) for o in orders if o.get("lat") and o.get("lng")]
+    no_geo = [o for o in orders if not o.get("lat") or not o.get("lng")]
+
+    if not valid:
+        # No coordinates — equal distance shares
+        legs = [{"order_id": o["id"], "distance_km": 1.0} for o in orders]
+        return legs
+
+    avg_lat = sum(lat for _, lat, _ in valid) / len(valid)
+    avg_lng = sum(lng for _, _, lng in valid) / len(valid)
+
+    # Nearest-neighbor from centroid
+    remaining = list(valid)
+    current_lat, current_lng = avg_lat, avg_lng
     legs = []
 
     while remaining:
-        nearest = min(
-            remaining,
-            key=lambda o: _distance(current, get_coordinates(o["village"])),
-        )
-        coords = get_coordinates(nearest["village"])
-        legs.append({
-            "order_id": nearest["id"],
-            "distance_km": round(_distance(current, coords), 3)
-        })
-        current = coords
+        nearest = min(remaining, key=lambda t: _haversine_km(current_lat, current_lng, t[1], t[2]))
+        order, lat, lng = nearest
+        dist = _haversine_km(current_lat, current_lng, lat, lng)
+        legs.append({"order_id": order["id"], "distance_km": round(dist, 3)})
+        current_lat, current_lng = lat, lng
         remaining.remove(nearest)
 
-    # return leg — shared cost, not assigned to any farmer
-    legs.append({
-        "order_id": None,
-        "distance_km": round(_distance(current, MANDI_COORDS), 3)
-    })
+    # Orders without GPS get average distance
+    avg_leg = sum(l["distance_km"] for l in legs) / len(legs) if legs else 1.0
+    for o in no_geo:
+        legs.append({"order_id": o["id"], "distance_km": round(avg_leg, 3)})
+
     return legs
 
 
 def allocate_cluster_costs(orders: list[dict]) -> dict:
     """
-    orders: raw Supabase order rows for one DBSCAN cluster.
-    Needs: id, village, weight_kg, individual_cost.
+    Allocate total cluster truck cost across farmers.
 
-    Returns:
-        total_distance_km, total_bundle_cost,
-        farmer_costs: [{ order_id, distance_km, weight_share,
-                         distance_share, allocation_fraction,
-                         bundled_cost, savings, savings_percent }]
+    Invariants:
+    - total_bundle_cost = sum(weight_kg) * FLAT_RATE_PER_KG
+    - Each farmer's bundled_cost <= their individual_cost
+    - Solo farmer: bundled_cost == individual_cost (no savings, no penalty)
     """
     if not orders:
         return {"total_distance_km": 0.0, "total_bundle_cost": 0, "farmer_costs": []}
 
+    # Solo farmer — no savings, no penalty
+    if len(orders) == 1:
+        o = orders[0]
+        individual_cost = int(o["individual_cost"])
+        bundled_cost = individual_cost
+        return {
+            "total_distance_km": 0.0,
+            "total_bundle_cost": bundled_cost,
+            "farmer_costs": [{
+                "order_id": o["id"],
+                "distance_km": 0.0,
+                "weight_share": 1.0,
+                "distance_share": 1.0,
+                "allocation_fraction": 1.0,
+                "bundled_cost": bundled_cost,
+                "savings": 0,
+                "savings_percent": 0.0,
+            }]
+        }
+
     legs = _build_route(orders)
-    farmer_legs = [leg for leg in legs if leg["order_id"] is not None]
-    total_distance_km = round(sum(leg["distance_km"] for leg in legs), 3)
-    farmer_leg_total = sum(leg["distance_km"] for leg in farmer_legs) or 1.0
+    total_distance_km = round(sum(l["distance_km"] for l in legs), 3)
+    farmer_leg_total = sum(l["distance_km"] for l in legs) or 1.0
 
     total_weight = sum(int(o["weight_kg"]) for o in orders)
     total_bundle_cost = round(total_weight * FLAT_RATE_PER_KG)
 
-    distance_by_order = {leg["order_id"]: leg["distance_km"] for leg in farmer_legs}
+    distance_by_order = {l["order_id"]: l["distance_km"] for l in legs}
     orders_by_id = {o["id"]: o for o in orders}
 
     farmer_costs = []
@@ -85,6 +119,10 @@ def allocate_cluster_costs(orders: list[dict]) -> dict:
         allocation_fraction = WEIGHT_WEIGHT * weight_share + DISTANCE_WEIGHT * distance_share
         bundled_cost = round(allocation_fraction * total_bundle_cost)
         individual_cost = int(order["individual_cost"])
+
+        # Invariant: bundled cost must never exceed individual cost
+        bundled_cost = min(bundled_cost, individual_cost)
+
         savings = individual_cost - bundled_cost
         savings_percent = round((savings / individual_cost) * 100, 1) if individual_cost > 0 else 0.0
 

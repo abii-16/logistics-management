@@ -9,6 +9,7 @@ import { RecommendationCard } from "@/components/RecommendationCard";
 import { SavingsPanel } from "@/components/SavingsPanel";
 import { TacticalMap } from "@/components/TacticalMap";
 import { StatusPill } from "@/components/StatusPill";
+import { RouteOptimizationPanel } from "@/components/RouteOptimizationPanel";
 
 export function AdminDashboard() {
   const [snapshot, setSnapshot] = useState<any>(null);
@@ -382,6 +383,57 @@ export function AdminDashboard() {
           </table>
         </div>
       </section>
+
+      {/* Cluster Route Optimization */}
+      {(() => {
+        // Group orders by cluster_id (only clustered orders)
+        const clusterMap: Record<string, any[]> = {};
+        orders.forEach((o: any) => {
+          const cid = o.clusterId || o.cluster_id;
+          if (!cid) return;
+          if (!clusterMap[cid]) clusterMap[cid] = [];
+          clusterMap[cid].push(o);
+        });
+        const clusterEntries = Object.entries(clusterMap);
+        if (clusterEntries.length === 0) return null;
+        return (
+          <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-panel">
+            <h2 className="text-lg font-bold text-soil mb-1">Cluster Route Optimization</h2>
+            <p className="text-xs text-stone-500 mb-4">
+              Run OR-Tools CVRP optimization per cluster using TomTom live traffic.
+            </p>
+            <div className="space-y-4">
+              {clusterEntries.map(([clusterId, clusterOrders]) => {
+                const totalWeight = clusterOrders.reduce((s: number, o: any) => s + o.weightKg, 0);
+                const geoCount = clusterOrders.filter((o: any) => o.lat && o.lng).length;
+                const destinations = [...new Set(clusterOrders.map((o: any) => o.destination))];
+                return (
+                  <div key={clusterId} className="rounded-lg border border-stone-100 p-4 bg-stone-50/50">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-bold text-soil">{clusterId}</p>
+                        <p className="text-xs text-stone-500">
+                          {clusterOrders.length} order{clusterOrders.length !== 1 ? "s" : ""} ·{" "}
+                          {totalWeight} kg · {destinations.join(", ")}
+                          {geoCount < clusterOrders.length && (
+                            <span className="ml-1 text-harvest">
+                              ({clusterOrders.length - geoCount} without GPS)
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <RouteOptimizationPanel
+                      clusterId={clusterId}
+                      farmerCount={geoCount}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* Live AI Processing Monitor Panel */}
       <div className="grid gap-5 xl:grid-cols-[1fr_0.9fr]">
