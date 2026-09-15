@@ -9,3 +9,6 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
+# Exclude all markdown documentation files
+*.md
+!README.md

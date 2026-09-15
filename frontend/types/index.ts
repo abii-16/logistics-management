@@ -17,13 +17,15 @@ export type FarmerOrder = {
   individualCost: number;
   sharedCost: number;
   pickupTime: string;
+  pickupDate?: string;
+  pickupSlot?: "morning" | "afternoon" | "evening";
+  isTimeFlexible?: boolean;
   source?: string;
   language?: string;
   confidence?: Record<string, number> | null;
   reviewRequired?: boolean;
-  lat?: number | null;
-  lng?: number | null;
-  clusterId?: string | null;
+  assignedDriver?: string | null;
+  finalCost?: number | null;
 };
 
 export type Driver = {
@@ -73,5 +75,31 @@ export type Recommendation = {
 export type SavingsPoint = {
   label: string;
   value: number;
+};
+
+export type TimeSlot = "morning" | "afternoon" | "evening";
+
+export type SlotBid = {
+  id: string;
+  driverId?: string | null;  // Made optional since it can be NULL
+  driverName: string;
+  pickupDate: string;
+  pickupSlot: TimeSlot;
+  amount: number;  // Changed from bidAmount to match backend
+  vehicle: string;
+  reliabilityScore: number;
+  bidType: "slot";
+  status: "Open" | "Accepted" | "Rejected";
+  createdAt: string;
+};
+
+export type SlotBidCreate = {
+  driver_id: string;
+  driver_name: string;
+  pickup_date: string;
+  pickup_slot: TimeSlot;
+  amount: number;  // Changed from bid_amount to match backend
+  vehicle: string;
+  reliability_score?: number;
 };
 

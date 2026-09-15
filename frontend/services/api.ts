@@ -1,4 +1,4 @@
-import { bids, drivers, farmerOrders } from "@/services/demoData";
+import { bids, drivers, extraction, farmerOrders, recommendation, savingsTrend } from "@/services/demoData";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -25,8 +25,8 @@ async function request<T>(path: string, fallback: T, init?: RequestInit): Promis
 
 export const api = {
   getOrders: async (phone?: string) => {
-    const path = phone ? `/api/bookings?phone=${encodeURIComponent(phone)}` : "/api/bookings";
-    const raw = await request<any[]>(path, farmerOrders);
+    const queryParam = phone ? `?phone=${encodeURIComponent(phone)}` : "";
+    const raw = await request<any[]>(`/api/bookings${queryParam}`, farmerOrders);
     return raw.map(o => ({
       id: o.id,
       farmerName: o.farmer_name || o.farmerName,
@@ -39,13 +39,15 @@ export const api = {
       individualCost: o.individual_cost || o.individualCost,
       sharedCost: o.shared_cost || o.sharedCost,
       pickupTime: o.pickup_time || o.pickupTime || "Awaiting cluster",
+      pickupDate: o.pickup_date || o.pickupDate,
+      pickupSlot: o.pickup_slot || o.pickupSlot,
+      isTimeFlexible: o.is_time_flexible ?? o.isTimeFlexible ?? true,
       source: o.source || "Web Dashboard",
       language: o.language || "en",
       confidence: o.confidence || null,
       reviewRequired: o.review_required || o.reviewRequired || false,
-      lat: o.lat || null,
-      lng: o.lng || null,
-      clusterId: o.cluster_id || o.clusterId || null,
+      assignedDriver: o.assigned_driver || o.assignedDriver || null,
+      finalCost: o.final_cost || o.finalCost || null
     }));
   },
   getDrivers: async () => {
@@ -73,19 +75,11 @@ export const api = {
   },
   getAdminSnapshot: async () => {
     const raw = await request<any>("/api/admin/snapshot", {
-      extraction: {
-        transcript: "Backend offline.",
-        extracted: { farmer_name: "—", village: "—", crop: "—", weight: "—" },
-        confidence: { farmer_name: 0, village: 0, crop: 0, weight: 0 },
-      },
-      recommendation: {
-        farmers: 0, total_weight_kg: 0, truck_utilization: 0,
-        estimated_savings: 0, spoilage_risk: "Low", departure_time: "—"
-      },
-      savingsTrend: [],
-      slot: null,
-      orders: [],
-      bids: []
+      extraction,
+      recommendation,
+      savingsTrend,
+      orders: farmerOrders,
+      bids: bids
     });
     return {
       extraction: raw.extraction,
@@ -98,7 +92,6 @@ export const api = {
         departureTime: raw.recommendation.departure_time || raw.recommendation.departureTime
       },
       savingsTrend: raw.savingsTrend,
-      slot: raw.slot || null,
       orders: (raw.orders || []).map((o: any) => ({
         id: o.id,
         farmerName: o.farmer_name || o.farmerName,
@@ -114,10 +107,7 @@ export const api = {
         source: o.source || "Web Dashboard",
         language: o.language || "en",
         confidence: o.confidence || null,
-        reviewRequired: o.review_required || o.reviewRequired || false,
-        lat: o.lat || null,
-        lng: o.lng || null,
-        clusterId: o.cluster_id || o.clusterId || null,
+        reviewRequired: o.review_required || o.reviewRequired || false
       })),
       bids: (raw.bids || []).map((b: any) => ({
         id: b.id,
@@ -142,10 +132,9 @@ export const api = {
       crop: payload.crop,
       weight_kg: Number(payload.weight_kg || payload.weightKg),
       status: "Cluster Forming",
-      destination: payload.destination || "",
-      // Offline fallback — backend computes real distance-based cost when online
-      individual_cost: Number(payload.weight_kg || payload.weightKg) * 8,
-      shared_cost: Number(payload.weight_kg || payload.weightKg) * 8,
+      destination: payload.destination || "Koyambedu Mandi",
+      individual_cost: Number(payload.weight_kg || payload.weightKg) * 8.5,
+      shared_cost: Number(payload.weight_kg || payload.weightKg) * 3.6,
       pickup_time: "Today, 5:30 PM",
       source: payload.source || "Web Dashboard",
       language: payload.language || "en",
@@ -199,7 +188,7 @@ export const api = {
       village: payload.village,
       crop: payload.crop,
       weight_kg: Number(payload.weightKg),
-      destination: payload.destination || ""
+      destination: payload.destination || "Koyambedu Mandi"
     };
     const o = await request<any>(`/api/bookings/${id}`, null, {
       method: "PUT",
@@ -213,9 +202,9 @@ export const api = {
       crop: payload.crop,
       weight_kg: Number(payload.weightKg),
       status: "Pending",
-      destination: payload.destination || "",
-      individual_cost: Number(payload.weightKg) * 8,
-      shared_cost: Number(payload.weightKg) * 8,  // offline fallback
+      destination: payload.destination || "Koyambedu Mandi",
+      individual_cost: Number(payload.weightKg) * 8.5,
+      shared_cost: Number(payload.weightKg) * 3.6,
       pickup_time: "Today, 5:30 PM",
       source: "Web Dashboard",
       language: "en",
@@ -306,9 +295,9 @@ export const api = {
           crop: extracted.crop,
           weightKg: extracted.weight,
           status: "Cluster Forming",
-          destination: "Koyambedu Mandi",  // voice default — no destination in speech
-          individualCost: extracted.weight * 8,
-          sharedCost: extracted.weight * 8,  // offline fallback — no distance data
+          destination: "Koyambedu Mandi",
+          individualCost: extracted.weight * 8.5,
+          sharedCost: extracted.weight * 3.6,
           pickupTime: "Today, 5:30 PM",
           source: "Voice Call",
           language: language === "Tamil" ? "ta" : language === "Hindi" ? "hi" : "en",
