@@ -24,8 +24,9 @@ async function request<T>(path: string, fallback: T, init?: RequestInit): Promis
 }
 
 export const api = {
-  getOrders: async () => {
-    const raw = await request<any[]>("/api/bookings", farmerOrders);
+  getOrders: async (phone?: string) => {
+    const queryParam = phone ? `?phone=${encodeURIComponent(phone)}` : "";
+    const raw = await request<any[]>(`/api/bookings${queryParam}`, farmerOrders);
     return raw.map(o => ({
       id: o.id,
       farmerName: o.farmer_name || o.farmerName,
@@ -38,10 +39,15 @@ export const api = {
       individualCost: o.individual_cost || o.individualCost,
       sharedCost: o.shared_cost || o.sharedCost,
       pickupTime: o.pickup_time || o.pickupTime || "Awaiting cluster",
+      pickupDate: o.pickup_date || o.pickupDate,
+      pickupSlot: o.pickup_slot || o.pickupSlot,
+      isTimeFlexible: o.is_time_flexible ?? o.isTimeFlexible ?? true,
       source: o.source || "Web Dashboard",
       language: o.language || "en",
       confidence: o.confidence || null,
-      reviewRequired: o.review_required || o.reviewRequired || false
+      reviewRequired: o.review_required || o.reviewRequired || false,
+      assignedDriver: o.assigned_driver || o.assignedDriver || null,
+      finalCost: o.final_cost || o.finalCost || null
     }));
   },
   getDrivers: async () => {

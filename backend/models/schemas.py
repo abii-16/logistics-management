@@ -1,9 +1,11 @@
-from typing import Literal
+from typing import Literal, Optional
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
 
 OrderStatus = Literal["Pending", "Cluster Forming", "Driver Assigned", "In Transit", "Completed"]
+TimeSlot = Literal["morning", "afternoon", "evening"]
 
 
 class BookingCreate(BaseModel):
@@ -13,6 +15,9 @@ class BookingCreate(BaseModel):
     crop: str
     weight_kg: int = Field(gt=0)
     destination: str = "Koyambedu Mandi"
+    pickup_date: Optional[date] = None
+    pickup_slot: Optional[TimeSlot] = None
+    is_time_flexible: bool = True
 
 
 class Booking(BookingCreate):
@@ -25,6 +30,8 @@ class Booking(BookingCreate):
     language: str = "en"
     confidence: dict[str, int] | None = None
     review_required: bool = False
+    assigned_driver: Optional[str] = None
+    final_cost: Optional[int] = None
 
 
 class Driver(BaseModel):

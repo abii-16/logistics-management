@@ -304,28 +304,6 @@ export default function DriverTripPage() {
               <MapPin size={17} /> Active Journey Map
             </Link>
           </nav>
-
-          {/* Performance & Score panel */}
-          <div className="rounded-xl border border-stone-150 p-4 bg-stone-50/50 space-y-2">
-            <div className="flex justify-between items-center text-xs">
-              <span className="font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1">
-                <Award size={14} className="text-harvest" />
-                Reliability Score
-              </span>
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black text-soil">{user.reliability_score || 94}</span>
-              <span className="text-xs font-semibold text-stone-500">/ 100</span>
-            </div>
-            <div className="flex items-center text-yellow-500 text-xs">
-              <Star size={12} fill="currentColor" />
-              <Star size={12} fill="currentColor" />
-              <Star size={12} fill="currentColor" />
-              <Star size={12} fill="currentColor" />
-              <Star size={12} fill="currentColor" className="opacity-80" />
-              <span className="ml-1 text-[10px] font-bold text-stone-500">({user.rating || 4.8} Farmer Rating)</span>
-            </div>
-          </div>
         </div>
 
         <button

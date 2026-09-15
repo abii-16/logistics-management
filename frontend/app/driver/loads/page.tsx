@@ -6,6 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/services/supabase";
 import { LogOut, Truck, Scale, Sprout, MapPin, IndianRupee, Compass, Clock, Award, Star, Bell, ShieldAlert, CheckCircle, X } from "lucide-react";
 import Link from "next/link";
+import { DriverTimeSlotView } from "@/components/DriverTimeSlotView";
+import { DriverOrderBidView } from "@/components/DriverOrderBidView";
 
 interface BidEvent {
   driverName: string;
@@ -18,6 +20,9 @@ interface BidEvent {
 export default function DriverLoadsPage() {
   const { user, loading } = useAuth("driver");
   const router = useRouter();
+
+  // View mode toggle: 'bundles' or 'slots'
+  const [viewMode, setViewMode] = useState<'bundles' | 'slots'>('slots');
 
   // Active load state (defaults to mock KB1024 if db bundles empty)
   const [bundles, setBundles] = useState<any[]>([]);
@@ -403,37 +408,7 @@ export default function DriverLoadsPage() {
             </Link>
           </nav>
 
-          {/* Performance & Score panel */}
-          <div id="performance-metrics" className="rounded-xl border border-stone-150 p-4 bg-stone-50/50 space-y-2">
-            <div className="flex justify-between items-center text-xs">
-              <span className="font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1">
-                <Award size={14} className="text-harvest" />
-                Reliability Score
-              </span>
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black text-soil">{user.reliability_score || 94}</span>
-              <span className="text-xs font-semibold text-stone-500">/ 100</span>
-            </div>
-            <div className="flex items-center text-yellow-500 text-xs">
-              <Star size={12} fill="currentColor" />
-              <Star size={12} fill="currentColor" />
-              <Star size={12} fill="currentColor" />
-              <Star size={12} fill="currentColor" />
-              <Star size={12} fill="currentColor" className="opacity-80" />
-              <span className="ml-1 text-[10px] font-bold text-stone-500">(4.8 Farmer Rating)</span>
-            </div>
-            <div className="pt-2 text-[10px] text-stone-500 border-t border-stone-200/50 grid grid-cols-2 gap-2">
-              <div>
-                <p className="font-bold">Completed Trips</p>
-                <p className="font-black text-stone-700">{user.completed_trips || 24}</p>
-              </div>
-              <div>
-                <p className="font-bold">Bid Success</p>
-                <p className="font-black text-stone-700">82%</p>
-              </div>
-            </div>
-          </div>
+          {/* Performance & Score panel - Removed as requested */}
         </div>
 
         <button
@@ -452,9 +427,40 @@ export default function DriverLoadsPage() {
             <h1 className="text-2xl font-black text-soil uppercase tracking-wide">Available Loads</h1>
             <p className="text-xs text-stone-500">Cooperative farmer transport loads waiting for bids.</p>
           </div>
-          <span className="text-xs font-semibold text-stone-500">Welcome back, {user.name}</span>
+          <div className="flex items-center gap-3">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setViewMode('slots')}
+                className={`rounded-lg px-4 py-2 text-sm font-bold transition-all ${
+                  viewMode === 'slots'
+                    ? 'bg-field text-white'
+                    : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'
+                }`}
+              >
+                📅 Time Slots
+              </button>
+              <button
+                onClick={() => setViewMode('bundles')}
+                className={`rounded-lg px-4 py-2 text-sm font-bold transition-all ${
+                  viewMode === 'bundles'
+                    ? 'bg-field text-white'
+                    : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'
+                }`}
+              >
+                📦 Bundles
+              </button>
+            </div>
+            <span className="text-xs font-semibold text-stone-500">Welcome, {user.name}</span>
+          </div>
         </div>
 
+        {/* Order Bidding View (Individual Orders) */}
+        {viewMode === 'slots' && (
+          <DriverOrderBidView user={user} />
+        )}
+
+        {/* Bundle View */}
+        {viewMode === 'bundles' && (
         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           {/* Bundle Cards Container */}
           <div className="space-y-4">
@@ -587,7 +593,6 @@ export default function DriverLoadsPage() {
                       </div>
                       <div className="text-right">
                         <p className="font-black text-soil">₹{bid.amount}</p>
-                        <p className="text-[9px] text-field font-bold">Rel: {bid.reliability}%</p>
                       </div>
                     </div>
                   ))}
@@ -633,11 +638,29 @@ export default function DriverLoadsPage() {
             </section>
           </div>
         </div>
+        )}
       </section>
 
       {/* FEATURE 2: Winner Celebration Modal */}
       {showWinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-sm p-4">
+        <>
+          <style jsx>{`
+            .modal-btn-primary {
+              background-color: #15803d !important;
+              color: white !important;
+            }
+            .modal-btn-primary:hover {
+              background-color: #166534 !important;
+            }
+            .modal-btn-secondary {
+              background-color: #1f2937 !important;
+              color: white !important;
+            }
+            .modal-btn-secondary:hover {
+              background-color: #111827 !important;
+            }
+          `}</style>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-2xl border-2 border-soil bg-white p-6 shadow-2xl relative overflow-hidden text-center animate-fadeIn">
             {/* Background Confetti Pattern */}
             <div className="absolute inset-0 bg-gradient-to-b from-soil/5 to-white pointer-events-none" />
@@ -661,25 +684,26 @@ export default function DriverLoadsPage() {
               </div>
             </div>
 
-            <div className="mt-6 flex flex-col gap-2">
+            <div className="mt-6 flex flex-col gap-3">
               <button
                 onClick={() => {
                   setShowWinModal(false);
                   router.push("/driver/trip");
                 }}
-                className="w-full focus-ring bg-soil text-white py-2.5 text-xs font-bold rounded-lg hover:bg-soil/95 transition-all uppercase tracking-wider"
+                className="modal-btn-primary w-full py-4 px-4 text-base font-black rounded-xl transition-all shadow-lg"
               >
-                Go to Active Trip
+                GO TO ACTIVE TRIP
               </button>
               <button
                 onClick={() => setShowWinModal(false)}
-                className="w-full focus-ring border border-stone-300 bg-white text-stone-600 py-2.5 text-xs font-bold rounded-lg hover:bg-stone-50 transition-all uppercase tracking-wider"
+                className="modal-btn-secondary w-full py-4 px-4 text-base font-bold rounded-xl transition-all shadow-lg"
               >
-                Dismiss
+                DISMISS
               </button>
             </div>
           </div>
         </div>
+        </>
       )}
     </main>
   );
