@@ -9,6 +9,7 @@ import { RecommendationCard } from "@/components/RecommendationCard";
 import { SavingsPanel } from "@/components/SavingsPanel";
 import { TacticalMap } from "@/components/TacticalMap";
 import { StatusPill } from "@/components/StatusPill";
+import { RouteOptimizationPanel } from "@/components/RouteOptimizationPanel";
 
 export function AdminDashboard() {
   const [snapshot, setSnapshot] = useState<any>(null);
@@ -21,17 +22,12 @@ export function AdminDashboard() {
     phone: "",
     village: "",
     crop: "",
-    weightKg: 0
+    weightKg: 0,
+    destination: ""
   });
 
-  // FEATURE 4: Live Operations Timeline State
-  const [timelineEvents, setTimelineEvents] = useState<any[]>([
-    { id: "init-5", time: "09:20 AM", title: "Booking Confirmed", details: "Booking KB1023 verified by Admin", status: "success" },
-    { id: "init-4", time: "09:17 AM", title: "Driver Assigned", details: "Kannan assigned to Vehicle TN 11 AB 4472", status: "info" },
-    { id: "init-3", time: "09:14 AM", title: "Bundle Generated", details: "Cooperative logistics bundle generated (1250 kg)", status: "warning" },
-    { id: "init-2", time: "09:13 AM", title: "AI Extraction Complete", details: "Gemini successfully parsed audio transcript", status: "success" },
-    { id: "init-1", time: "09:12 AM", title: "Farmer Call Received", details: "Incoming helpline call from Arumugam", status: "call" },
-  ]);
+  // Live Operations Timeline — starts empty, populated from real order events
+  const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
 
   const [prevOrdersCount, setPrevOrdersCount] = useState<number>(0);
 
@@ -50,47 +46,65 @@ export function AdminDashboard() {
     loadSnapshot();
   }, []);
 
-  // Prepend live events when new orders arrive
+  // Build timeline from real orders on initial load + detect new arrivals
   useEffect(() => {
-    if (snapshot?.orders && snapshot.orders.length > 0) {
-      const currentOrders = snapshot.orders;
-      if (prevOrdersCount > 0 && currentOrders.length > prevOrdersCount) {
-        // Find the new order (usually the first one in the list since they are sorted desc)
-        const newOrder = currentOrders[0];
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        const callTime = new Date(now.getTime() - 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const extractionTime = new Date(now.getTime() - 30000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        const newEvents = [
-          {
-            id: `evt-${newOrder.id}-3`,
-            time: timeStr,
-            title: "Booking Confirmed",
-            details: `Booking ${newOrder.id} successfully saved (${newOrder.weight_kg || newOrder.weightKg || 400} kg ${newOrder.crop || 'Tomato'})`,
-            status: "success"
-          },
-          {
-            id: `evt-${newOrder.id}-2`,
-            time: extractionTime,
-            title: "AI Extraction Complete",
-            details: `Confidence score: ${newOrder.review_required || newOrder.reviewRequired ? "Needs Review" : "Verified"} for ${newOrder.farmer_name || newOrder.farmerName || 'Farmer'}`,
-            status: newOrder.review_required || newOrder.reviewRequired ? "danger" : "success"
-          },
-          {
-            id: `evt-${newOrder.id}-1`,
-            time: callTime,
-            title: "Farmer Call Received",
-            details: `Incoming helpline call from ${newOrder.farmer_name || newOrder.farmerName || 'Farmer'} (${newOrder.village || 'Melma'})`,
-            status: "call"
-          }
-        ];
+    if (!snapshot?.orders) return;
+    const currentOrders = snapshot.orders;
 
-        setTimelineEvents((prev) => [...newEvents, ...prev]);
-      }
+    // On first load: build timeline from the 5 most recent real orders
+    if (prevOrdersCount === 0 && currentOrders.length > 0) {
+      const initialEvents: any[] = [];
+      currentOrders.slice(0, 5).forEach((order: any) => {
+        const createdAt = order.created_at
+          ? new Date(order.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          : "—";
+        const isVoice = (order.source || order.source) === "Voice Call";
+        initialEvents.push({
+          id: `init-${order.id}`,
+          time: createdAt,
+          title: isVoice ? "Voice Booking Created" : "Web Booking Created",
+          details: `${order.farmer_name || order.farmerName} — ${order.crop} ${order.weight_kg || order.weightKg}kg from ${order.village}`,
+          status: order.review_required || order.reviewRequired ? "danger" : "success",
+        });
+        if (order.cluster_id || order.clusterId) {
+          initialEvents.push({
+            id: `init-cluster-${order.id}`,
+            time: createdAt,
+            title: "Cluster Formed",
+            details: `Order ${order.id} assigned to ${order.cluster_id || order.clusterId}`,
+            status: "info",
+          });
+        }
+      });
+      setTimelineEvents(initialEvents);
       setPrevOrdersCount(currentOrders.length);
+      return;
     }
+
+    // On subsequent loads: detect new orders and prepend events
+    if (prevOrdersCount > 0 && currentOrders.length > prevOrdersCount) {
+      const newOrder = currentOrders[0];
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const newEvents = [
+        {
+          id: `evt-${newOrder.id}-confirm`,
+          time: timeStr,
+          title: "Booking Confirmed",
+          details: `${newOrder.id} — ${newOrder.weightKg || newOrder.weight_kg}kg ${newOrder.crop} from ${newOrder.village}`,
+          status: "success",
+        },
+        ...(newOrder.source === "Voice Call" ? [{
+          id: `evt-${newOrder.id}-ai`,
+          time: timeStr,
+          title: "AI Extraction Complete",
+          details: `${newOrder.reviewRequired || newOrder.review_required ? "Needs manual review" : "Verified"} — ${newOrder.farmerName || newOrder.farmer_name}`,
+          status: newOrder.reviewRequired || newOrder.review_required ? "danger" : "success",
+        }] : []),
+      ];
+      setTimelineEvents((prev) => [...newEvents, ...prev]);
+    }
+    setPrevOrdersCount(currentOrders.length);
   }, [snapshot?.orders]);
 
   function handleStartEdit(order: any) {
@@ -100,7 +114,8 @@ export function AdminDashboard() {
       phone: order.phone,
       village: order.village,
       crop: order.crop,
-      weightKg: order.weightKg
+      weightKg: order.weightKg,
+      destination: order.destination || ""
     });
   }
 
@@ -167,10 +182,51 @@ export function AdminDashboard() {
     <div className="space-y-5">
       {/* Metrics Section */}
       <div className="grid gap-4 md:grid-cols-3">
-        <MetricCard icon={UsersRound} label="Farmers Served" value={`${orders.length}`} detail="Active cooperative load for Koyambedu Mandi" />
+        <MetricCard icon={UsersRound} label="Farmers Served" value={`${orders.length}`} detail="Active cooperative bookings across all destinations" />
         <MetricCard icon={IndianRupee} label="Money Saved" value={`Rs ${totalSavings.toLocaleString("en-IN")}`} detail="Savings compared with individual transport" />
         <MetricCard icon={Package} label="Weight Transported" value={`${totalWeight} kg`} detail={`Current cluster utilization is ${recommendation.truckUtilization}%`} />
       </div>
+
+      {/* Slot Status Banner — always visible */}
+      <section className="rounded-lg border border-harvest/30 bg-harvest/5 p-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-harvest opacity-75" />
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-harvest" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-stone-800">
+              Next clustering slot:{" "}
+              <span className="text-harvest">
+                {snapshot?.slot?.next_slot ?? "—"}
+              </span>
+            </p>
+            <p className="text-xs text-stone-500">
+              {snapshot?.slot?.pending_orders ?? 0} order{(snapshot?.slot?.pending_orders ?? 0) !== 1 ? "s" : ""} waiting •{" "}
+              {snapshot?.slot?.wait_minutes ?? "—"} min until DBSCAN runs automatically
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={async () => {
+            try {
+              const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/api/admin/run-clustering`, { method: "POST" });
+              const data = await res.json();
+              if (data.success) {
+                alert(`Clustering complete — ${data.clusters_formed} cluster(s) formed. Next slot: ${data.next_slot}`);
+              } else {
+                alert(`Clustering failed: ${data.error}`);
+              }
+              loadSnapshot();
+            } catch {
+              alert("Clustering failed — check backend logs.");
+            }
+          }}
+          className="focus-ring rounded-lg bg-harvest px-4 py-2 text-xs font-bold text-white hover:bg-harvest/90 transition-colors"
+        >
+          Run Clustering Now
+        </button>
+      </section>
 
       {/* Manual Review Alert Card */}
       {reviewOrders.length > 0 && (
@@ -327,6 +383,57 @@ export function AdminDashboard() {
           </table>
         </div>
       </section>
+
+      {/* Cluster Route Optimization */}
+      {(() => {
+        // Group orders by cluster_id (only clustered orders)
+        const clusterMap: Record<string, any[]> = {};
+        orders.forEach((o: any) => {
+          const cid = o.clusterId || o.cluster_id;
+          if (!cid) return;
+          if (!clusterMap[cid]) clusterMap[cid] = [];
+          clusterMap[cid].push(o);
+        });
+        const clusterEntries = Object.entries(clusterMap);
+        if (clusterEntries.length === 0) return null;
+        return (
+          <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-panel">
+            <h2 className="text-lg font-bold text-soil mb-1">Cluster Route Optimization</h2>
+            <p className="text-xs text-stone-500 mb-4">
+              Run OR-Tools CVRP optimization per cluster using TomTom live traffic.
+            </p>
+            <div className="space-y-4">
+              {clusterEntries.map(([clusterId, clusterOrders]) => {
+                const totalWeight = clusterOrders.reduce((s: number, o: any) => s + o.weightKg, 0);
+                const geoCount = clusterOrders.filter((o: any) => o.lat && o.lng).length;
+                const destinations = [...new Set(clusterOrders.map((o: any) => o.destination))];
+                return (
+                  <div key={clusterId} className="rounded-lg border border-stone-100 p-4 bg-stone-50/50">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-bold text-soil">{clusterId}</p>
+                        <p className="text-xs text-stone-500">
+                          {clusterOrders.length} order{clusterOrders.length !== 1 ? "s" : ""} ·{" "}
+                          {totalWeight} kg · {destinations.join(", ")}
+                          {geoCount < clusterOrders.length && (
+                            <span className="ml-1 text-harvest">
+                              ({clusterOrders.length - geoCount} without GPS)
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <RouteOptimizationPanel
+                      clusterId={clusterId}
+                      farmerCount={geoCount}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* Live AI Processing Monitor Panel */}
       <div className="grid gap-5 xl:grid-cols-[1fr_0.9fr]">
@@ -525,6 +632,17 @@ export function AdminDashboard() {
                     required
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-600 uppercase mb-1">Destination Market</label>
+                <input
+                  type="text"
+                  value={editForm.destination}
+                  onChange={(e) => setEditForm({ ...editForm, destination: e.target.value })}
+                  className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus-ring"
+                  placeholder="e.g. Koyambedu Mandi, Chennai"
+                  required
+                />
               </div>
             </div>
 

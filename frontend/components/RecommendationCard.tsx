@@ -10,13 +10,16 @@ interface RecommendationCardProps {
 }
 
 export function RecommendationCard({ recommendation, orders = [] }: RecommendationCardProps) {
-  // 1. Crop Compatibility Engine
+  // Crop Compatibility — uses backend spoilageRisk as authoritative risk level,
+  // frontend engine provides freshness % and detailed reasons
   const checkCropCompatibility = () => {
+    const backendRisk = recommendation.spoilageRisk as "Low" | "Medium" | "High";
+
     if (orders.length === 0) {
       return {
         isCompatible: true,
         freshness: 100,
-        risk: "Low" as const,
+        risk: backendRisk,
         reasons: ["No active bookings in queue"]
       };
     }
@@ -31,8 +34,8 @@ export function RecommendationCard({ recommendation, orders = [] }: Recommendati
     if (hasProducer && hasSensitive) {
       return {
         isCompatible: false,
-        freshness: 72,
-        risk: "High" as const,
+        freshness: backendRisk === "High" ? 72 : 80,
+        risk: backendRisk,
         reasons: [
           "Ethylene producer mixed with sensitive crop",
           "Accelerated ripening risk",
@@ -44,8 +47,8 @@ export function RecommendationCard({ recommendation, orders = [] }: Recommendati
     if (uniqueCrops.length > 2) {
       return {
         isCompatible: true,
-        freshness: 86,
-        risk: "Medium" as const,
+        freshness: backendRisk === "High" ? 78 : 86,
+        risk: backendRisk,
         reasons: [
           "Mixed cargo load",
           "Short direct transit time",
@@ -56,8 +59,8 @@ export function RecommendationCard({ recommendation, orders = [] }: Recommendati
 
     return {
       isCompatible: true,
-      freshness: 94,
-      risk: "Low" as const,
+      freshness: backendRisk === "Low" ? 94 : backendRisk === "Medium" ? 85 : 75,
+      risk: backendRisk,
       reasons: [
         "Compatible Crops",
         "Short Transit Time",
@@ -70,7 +73,8 @@ export function RecommendationCard({ recommendation, orders = [] }: Recommendati
 
   // 2. Truck Utilization Math
   const totalWeight = orders.reduce((sum, o) => sum + o.weightKg, 0);
-  const truckCapacity = 1500; // standard cooperative truck size in kg
+  // Truck Utilization — 1100kg standard cooperative truck (matches backend)
+  const truckCapacity = 1100;
   const utilizationPercent = Math.min(100, Math.round((totalWeight / truckCapacity) * 100));
 
   // 3. Route Efficiency Analytics Calculations
